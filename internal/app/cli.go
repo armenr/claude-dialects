@@ -212,8 +212,9 @@ func createDialect(args []string) error {
 	home, _ := os.UserHomeDir()
 	shimName := preferredShimName(name)
 	target := filepath.Join(home, ".local", "bin", shimName)
-	if alias, found := zshAlias(shimName); found {
+	if alias, shell, config, found := shellAlias(shimName); found {
 		fmt.Printf("Warning: command name %q is already used by %s.\n", shimName, alias)
+		fmt.Printf("Remove the alias from %s (%s) before installing this command.\n", config, shell)
 		shimName = suggestedShimName(shimName)
 	} else if conflicts := commandConflicts(shimName, target); len(conflicts) > 0 {
 		fmt.Printf("Warning: command name %q already exists at %s.\n", shimName, strings.Join(conflicts, ", "))
@@ -787,8 +788,8 @@ func shimCommand(args []string) error {
 		return err
 	}
 	path := filepath.Join(*dir, *name)
-	if alias, found := zshAlias(*name); found {
-		return fmt.Errorf("zsh alias %q would override the installed command; remove it from ~/.zshrc and run `unalias %s` in already-open terminals", alias, *name)
+	if alias, shell, config, found := shellAlias(*name); found {
+		return fmt.Errorf("%s alias %q would override the installed command; remove it from %s and run `unalias %s` in already-open terminals", shell, alias, config, *name)
 	}
 	if conflicts := commandConflicts(*name, path); len(conflicts) > 0 {
 		return fmt.Errorf("command %q already exists at %s; choose another name, for example: cc-dialect shim install %s --name %s",
@@ -840,16 +841,30 @@ func nativeLauncherBody(claudePath string, dangerous bool) string {
 	return fmt.Sprintf("#!/bin/sh\nexec %q%s \"$@\"\n", claudePath, flag)
 }
 
-func zshAlias(name string) (string, bool) {
+func shellAlias(name string) (alias, shell, config string, found bool) {
 	if !validName(name) {
-		return "", false
+		return "", "", "", false
 	}
-	output, err := exec.Command("zsh", "-ic", "alias "+name).CombinedOutput()
-	if err != nil {
-		return "", false
+	for _, candidate := range []struct {
+		name, config string
+	}{
+		{"zsh", "~/.zshrc"},
+		{"bash", "~/.bashrc"},
+	} {
+		path, err := exec.LookPath(candidate.name)
+		if err != nil {
+			continue
+		}
+		output, err := exec.Command(path, "-ic", "alias "+name).Output()
+		if err != nil {
+			continue
+		}
+		alias = strings.TrimSpace(string(output))
+		if alias != "" {
+			return alias, candidate.name, candidate.config, true
+		}
 	}
-	alias := strings.TrimSpace(string(output))
-	return alias, alias != ""
+	return "", "", "", false
 }
 
 func pathContains(dir string) bool {
@@ -939,8 +954,10 @@ func doctor(args []string, version string) error {
 	} else {
 		fmt.Println("✗ Claude Code not found in PATH")
 	}
-	if runtime.GOOS != "darwin" || runtime.GOARCH != "arm64" {
-		fmt.Printf("✗ unsupported platform %s/%s (requires darwin/arm64)\n", runtime.GOOS, runtime.GOARCH)
+	if !supportedPlatform(runtime.GOOS, runtime.GOARCH) {
+		fmt.Printf("✗ unsupported platform %s/%s (requires macOS or Linux on amd64 or arm64)\n", runtime.GOOS, runtime.GOARCH)
+	} else {
+		fmt.Printf("✓ platform %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	}
 	hasCursor := false
 	hasCopilot := false
@@ -1004,8 +1021,8 @@ func doctor(args []string, version string) error {
 	}
 	for name := range cfg.Dialects {
 		shimName := preferredShimName(name)
-		if alias, found := zshAlias(shimName); found {
-			fmt.Printf("✗ %s is shadowed by %s\n", shimName, alias)
+		if alias, shell, _, found := shellAlias(shimName); found {
+			fmt.Printf("✗ %s is shadowed by %s (%s)\n", shimName, alias, shell)
 		}
 		home, _ := os.UserHomeDir()
 		target := filepath.Join(home, ".local", "bin", shimName)

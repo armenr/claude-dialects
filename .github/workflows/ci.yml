@@ -16,9 +16,13 @@ concurrency:
 
 jobs:
   test:
-    name: test
-    runs-on: macos-15
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04]
 
     steps:
       - name: Check out source
@@ -88,5 +92,5 @@ jobs:
           ./scripts/generate-third-party-notices.sh
           git diff --exit-code -- THIRD_PARTY_NOTICES.md
 
-      - name: Build macOS binary
+      - name: Build host binary
         run: make build VERSION=ci

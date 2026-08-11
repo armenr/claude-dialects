@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
 
@@ -78,7 +79,10 @@ func upgrade(ref string) error {
 	// the VERSION=dev default so the next upgrade can short-circuit.
 	built := filepath.Join(tempDir, "cc-dialect")
 	fmt.Printf("Building cc-dialect %s...\n", targetVersion)
-	buildEnv := []string{"CGO_ENABLED=0", "GOOS=darwin", "GOARCH=arm64"}
+	if !supportedPlatform(runtime.GOOS, runtime.GOARCH) {
+		return fmt.Errorf("self-upgrade is not supported on %s/%s; %s", runtime.GOOS, runtime.GOARCH, upgradeManualInstructions)
+	}
+	buildEnv := upgradeBuildEnvironment(runtime.GOOS, runtime.GOARCH)
 	if err = runUpgradeStep(logPath, sourceDir, buildEnv, goPath,
 		"build", "-trimpath", "-ldflags=-s -w -X main.version="+targetVersion, "-o", built, "."); err != nil {
 		keepTemp = true
@@ -102,6 +106,10 @@ func upgrade(ref string) error {
 		return fmt.Errorf("the upgrade completed, but reconciling runtimes failed: %w\nrun manually: cc-dialect doctor --fix", err)
 	}
 	return nil
+}
+
+func upgradeBuildEnvironment(goos, goarch string) []string {
+	return []string{"CGO_ENABLED=0", "GOOS=" + goos, "GOARCH=" + goarch}
 }
 
 // upgradeBuildTools verifies the tools upgrade shells out to are available

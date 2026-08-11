@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -49,6 +50,14 @@ func TestUpgradeBuildToolsFound(t *testing.T) {
 	}
 	if gitPath != "/usr/bin/git" || goPath != "/usr/bin/go" {
 		t.Fatalf("unexpected tool paths %q, %q", gitPath, goPath)
+	}
+}
+
+func TestUpgradeBuildEnvironmentUsesHostPlatform(t *testing.T) {
+	want := []string{"CGO_ENABLED=0", "GOOS=linux", "GOARCH=amd64"}
+	got := upgradeBuildEnvironment("linux", "amd64")
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("upgradeBuildEnvironment() = %v, want %v", got, want)
 	}
 }
 

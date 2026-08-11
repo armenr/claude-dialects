@@ -22,7 +22,7 @@ Update README and website together whenever you change any of:
 - Preset names, default models, or provider mappings
 - Authentication steps (OAuth providers, API keys, `auth` / `cursor install` /
   `copilot install`)
-- Platform or dependency requirements (macOS, Go, Node.js, Claude Code)
+- Platform or dependency requirements (macOS, Linux, Go, Node.js, Claude Code)
 - Per-dialect isolation, ports, proxy lifecycle, or state directories
 - Disclaimers, third-party notices, or legal/platform warnings
 - New or removed providers or bridge integrations
@@ -34,7 +34,7 @@ Update README and website together whenever you change any of:
 | Install, first dialect, multi-dialect | Install / Create your first dialect | `getting-started.html`, `index.html` (hero/configure tabs) |
 | Provider setup | Provider guides table + per-provider blocks | `providers.html`, `index.html` (provider cards) |
 | Model switching, custom dialects, proxy ops, security | Later README sections | `reference.html`, `legal.html` |
-| Disclaimers, CLIProxyAPI credit, macOS-only | Important callout, Files and security | `legal.html`, footers on all pages |
+| Disclaimers, CLIProxyAPI credit, supported platforms | Important callout, Files and security | `legal.html`, footers on all pages |
 | High-level value proposition | Introduction | `index.html` (hero, Why Claude Dialects) |
 
 Keep wording consistent between README and the site. The README may be more
@@ -55,8 +55,9 @@ Before opening or merging a PR that touches user-facing behavior:
 - **Product:** Multiple isolated Claude Code dialects, each with its own model,
   credentials, config, history, and embedded [CLIProxyAPI](https://github.com/router-for-me/CLIProxyAPI)
   instance — no manual proxy setup or global `~/.claude` changes.
-- **Platform:** macOS only (state under
-  `~/Library/Application Support/claude-dialects`).
+- **Platforms:** macOS and Linux on arm64 or amd64. State uses the platform
+  configuration directory (`~/Library/Application Support/claude-dialects` on
+  macOS and `${XDG_CONFIG_HOME:-~/.config}/claude-dialects` on Linux).
 - **Build:** `make install` produces `~/.local/bin/cc-dialect`. No published
   binaries; see README “Build local assets”. The committed
   `internal/app/dashboard/dist/` frontend is embedded in that binary, so Node.js

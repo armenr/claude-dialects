@@ -21,9 +21,13 @@ concurrency:
 
 jobs:
   analyze:
-    name: Analyze (go)
-    runs-on: macos-15
+    name: Analyze Go (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, ubuntu-24.04]
 
     steps:
       - name: Check out source
@@ -41,7 +45,7 @@ jobs:
           languages: go
           build-mode: manual
 
-      - name: Build macOS binary
+      - name: Build host binary
         run: make build VERSION=codeql
 
       - name: Analyze

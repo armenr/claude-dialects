@@ -3,12 +3,14 @@
 
 VERSION ?= dev
 PREFIX ?= $(HOME)/.local
-ASSET_NAME = cc-dialect_$(VERSION)_darwin_arm64
+GOOS ?= $(shell go env GOOS)
+GOARCH ?= $(shell go env GOARCH)
+ASSET_NAME = cc-dialect_$(VERSION)_$(GOOS)_$(GOARCH)
 DASHBOARD_DIR = internal/app/dashboard
 DASHBOARD_DIST = $(DASHBOARD_DIR)/dist
 
 build:
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o dist/cc-dialect .
+	CGO_ENABLED=0 GOOS=$(GOOS) GOARCH=$(GOARCH) go build -trimpath -ldflags="-s -w -X main.version=$(VERSION)" -o dist/cc-dialect .
 
 test:
 	go test ./...
@@ -36,6 +38,9 @@ verify: dashboard-verify
 	go test ./...
 	go vet ./...
 	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build ./...
+	CGO_ENABLED=0 GOOS=darwin GOARCH=amd64 go build ./...
+	CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build ./...
+	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build ./...
 
 notices: dashboard-install
 	./scripts/generate-third-party-notices.sh
@@ -48,12 +53,12 @@ install: build
 	mv -f "$$tmp" "$(PREFIX)/bin/cc-dialect"; \
 	rm -f "$(PREFIX)/bin/dialect"
 
-assets: build notices
+assets: build
 	rm -rf "artifacts/$(ASSET_NAME)"
 	mkdir -p "artifacts/$(ASSET_NAME)"
 	cp dist/cc-dialect LICENSE README.md THIRD_PARTY_NOTICES.md "artifacts/$(ASSET_NAME)/"
-	cd artifacts && COPYFILE_DISABLE=1 ditto -c -k --norsrc --noextattr --keepParent "$(ASSET_NAME)" "$(ASSET_NAME).zip"
-	cd artifacts && shasum -a 256 "$(ASSET_NAME).zip" > SHA256SUMS
+	cd artifacts && zip -qr "$(ASSET_NAME).zip" "$(ASSET_NAME)"
+	cd artifacts && { command -v sha256sum >/dev/null 2>&1 && sha256sum "$(ASSET_NAME).zip" || shasum -a 256 "$(ASSET_NAME).zip"; } > SHA256SUMS
 
 package: assets
 

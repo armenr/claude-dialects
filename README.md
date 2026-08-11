@@ -17,7 +17,7 @@ There is no separate proxy download, installation, container, or global
 `~/.claude/settings.json` modification. Changes made with `/model`, `/effort`,
 or other user-level Claude Code settings stay inside the active dialect.
 
-> Current target: macOS only.
+> Supported platforms: macOS and Linux on amd64 or arm64.
 
 > [!IMPORTANT]
 > This is an independent, unofficial project. It is not affiliated with or
@@ -57,7 +57,7 @@ or other user-level Claude Code settings stay inside the active dialect.
 
 Requirements:
 
-- macOS;
+- macOS or Linux on amd64 or arm64;
 - Go 1.26.5 or newer
 - [Claude Code](https://docs.anthropic.com/en/docs/claude-code) available as
   `claude`
@@ -79,7 +79,7 @@ This produces one static executable at `~/.local/bin/cc-dialect`.
 To make that PATH change persist across terminal restarts:
 
 ```sh
-echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.profile
 ```
 
 ### Update Claude Dialects
@@ -641,8 +641,9 @@ cc-codex · GPT-5.6 Sol · effort:auto · ctx 42%
 `cc-dialect create` writes `instances/<name>/statusline.sh` and wires it into
 the dialect's isolated `claude/settings.json`; dialects created before this
 feature are backfilled the next time they run. The dialect name is colored per
-provider route. The script uses `jq` (preinstalled on recent macOS); when `jq`
-is missing the statusline stays empty instead of erroring.
+provider route. The script uses `jq`; when `jq` is missing the statusline stays
+empty instead of erroring. Install it with your operating system's package
+manager if you want the generated statusline.
 
 - **Customize:** point the `statusLine` key in
   `instances/<name>/claude/settings.json` at your own script — a `statusLine`
@@ -1149,8 +1150,10 @@ Supported embedded OAuth providers are `codex`, `claude`, `kimi`,
 
 ## Files and security
 
-State lives under `~/Library/Application Support/claude-dialects` on macOS (or
-`DIALECT_HOME` when set):
+State uses the operating system's user configuration directory: under
+`~/Library/Application Support/claude-dialects` on macOS and
+`${XDG_CONFIG_HOME:-$HOME/.config}/claude-dialects` on Linux. `DIALECT_HOME`
+overrides both defaults:
 
 ```text
 config.json          # dialect configuration and tracked native-launcher registry
@@ -1295,10 +1298,10 @@ do not need to recreate the dialect, re-authenticate its proxy, or reinstall its
 shim. Conversations previously stored in the shared `~/.claude` directory do
 not automatically appear in the new isolated history.
 
-If a Zsh alias already uses the generated command name, it takes precedence
-over the executable. Remove the alias from `~/.zshrc`, then run `unalias
-<name>` in terminals that were already open. Both `cc-dialect shim install` and
-`cc-dialect doctor` detect these collisions.
+If a Zsh or Bash alias already uses the generated command name, it takes
+precedence over the executable. Remove the alias from `~/.zshrc` or `~/.bashrc`,
+then run `unalias <name>` in terminals that were already open. Both
+`cc-dialect shim install` and `cc-dialect doctor` detect these collisions.
 
 The same applies to existing executables. `cc-dialect create` checks the
 preferred `cc-` command name and recommends an unambiguous alternative when it
@@ -1370,7 +1373,10 @@ To erase every currently configured dialect, remove each name shown by
 
 ```sh
 rm ~/.local/bin/cc-dialect
+# macOS:
 rm -rf "$HOME/Library/Application Support/claude-dialects"
+# Linux (honors XDG_CONFIG_HOME when set):
+rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/claude-dialects"
 ```
 
 The final `rm -rf` is intentionally explicit because it permanently deletes
@@ -1439,18 +1445,19 @@ in `THIRD_PARTY_NOTICES.md`; development-only frontend packages are not shipped 
 the binary.
 
 This project does not publish prebuilt binaries or GitHub releases. Everyone
-builds the executable from the checked-out source. To create a shareable local
-macOS archive and checksum instead of installing it:
+builds the executable from the checked-out source. To create a shareable archive
+and checksum for the current operating system and architecture instead of
+installing it:
 
 ```sh
 make assets VERSION=dev
 ls artifacts/
-(cd artifacts && shasum -a 256 -c SHA256SUMS)
+(cd artifacts && { sha256sum -c SHA256SUMS 2>/dev/null || shasum -a 256 -c SHA256SUMS; })
 ```
 
 The generated files are:
 
-- `artifacts/cc-dialect_dev_darwin_arm64.zip`
+- `artifacts/cc-dialect_dev_<os>_<arch>.zip`
 - `artifacts/SHA256SUMS`
 
 Set `VERSION` to any identifier you want in the filename and embedded
