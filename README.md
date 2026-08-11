@@ -1447,7 +1447,8 @@ the binary.
 This project does not publish prebuilt binaries or GitHub releases. Everyone
 builds the executable from the checked-out source. To create a shareable archive
 and checksum for the current operating system and architecture instead of
-installing it:
+installing it, install an Info-ZIP-compatible `zip` command first (`zip` is not
+needed for `make build` or `make install`):
 
 ```sh
 make assets VERSION=dev

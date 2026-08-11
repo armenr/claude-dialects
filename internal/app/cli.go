@@ -842,6 +842,12 @@ func nativeLauncherBody(claudePath string, dangerous bool) string {
 }
 
 func shellAlias(name string) (alias, shell, config string, found bool) {
+	return findShellAlias(name, exec.LookPath, func(path, command string) ([]byte, error) {
+		return exec.Command(path, "-ic", command).Output()
+	})
+}
+
+func findShellAlias(name string, lookPath func(string) (string, error), run func(string, string) ([]byte, error)) (alias, shell, config string, found bool) {
 	if !validName(name) {
 		return "", "", "", false
 	}
@@ -851,11 +857,11 @@ func shellAlias(name string) (alias, shell, config string, found bool) {
 		{"zsh", "~/.zshrc"},
 		{"bash", "~/.bashrc"},
 	} {
-		path, err := exec.LookPath(candidate.name)
+		path, err := lookPath(candidate.name)
 		if err != nil {
 			continue
 		}
-		output, err := exec.Command(path, "-ic", "alias "+name).Output()
+		output, err := run(path, "alias "+name)
 		if err != nil {
 			continue
 		}

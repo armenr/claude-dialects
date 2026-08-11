@@ -29,6 +29,13 @@ beforeEach(() => {
 });
 
 describe('LauncherDialog', () => {
+  it('uses a platform-neutral install-directory example', () => {
+    render(<LauncherDialog trigger={<button>Install launcher</button>} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Install launcher' }));
+
+    expect(screen.getByLabelText('Install directory')).toHaveAttribute('placeholder', '/path/to/bin');
+  });
+
   it('rejects tilde and relative install directories in the form', () => {
     render(<LauncherDialog trigger={<button>Install launcher</button>} />);
     fireEvent.click(screen.getByRole('button', { name: 'Install launcher' }));

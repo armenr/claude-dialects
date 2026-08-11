@@ -56,6 +56,7 @@ body:
       label: Hardware
       options:
         - macOS
+        - Linux
         - Other (unsupported)
     validations:
       required: true

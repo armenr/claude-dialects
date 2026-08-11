@@ -431,7 +431,7 @@ rm -rf "${XDG_CONFIG_HOME:-$HOME/.config}/claude-dialects"</code></pre>
       <section id="build" class="doc-section reveal">
         <h2>Build local assets</h2>
         <p>The compiled dashboard in <code>internal/app/dashboard/dist/</code> is committed and embedded into the one Go binary. Node.js is not required for dashboard runtime or a normal <code>make build</code>/<code>make install</code>; contributors rebuilding the frontend need npm with Node.js 22.22.2+ or 24.15.0+ and must commit the refreshed <code>dist/</code>.</p>
-        <p>Create a shareable archive for the current operating system and architecture instead of installing directly:</p>
+        <p>Create a shareable archive for the current operating system and architecture instead of installing directly. Packaging requires an Info-ZIP-compatible <code>zip</code> command; <code>zip</code> is not needed for <code>make build</code> or <code>make install</code>.</p>
         <div class="code-block">
           <div class="code-block__header">
             <span>Package for sharing</span>

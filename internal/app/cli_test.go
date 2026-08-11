@@ -1,9 +1,67 @@
 package app
 
 import (
+	"errors"
+	"reflect"
 	"strings"
 	"testing"
 )
+
+func TestFindShellAliasPrefersZsh(t *testing.T) {
+	var commands []string
+	alias, shell, config, found := findShellAlias("cc-test",
+		func(name string) (string, error) { return "/bin/" + name, nil },
+		func(path, command string) ([]byte, error) {
+			commands = append(commands, path+" "+command)
+			return []byte("cc-test='first'\n"), nil
+		})
+	if !found || alias != "cc-test='first'" || shell != "zsh" || config != "~/.zshrc" {
+		t.Fatalf("findShellAlias() = %q, %q, %q, %v", alias, shell, config, found)
+	}
+	if !reflect.DeepEqual(commands, []string{"/bin/zsh alias cc-test"}) {
+		t.Fatalf("commands = %v", commands)
+	}
+}
+
+func TestFindShellAliasFallsBackToBash(t *testing.T) {
+	alias, shell, config, found := findShellAlias("cc-test",
+		func(name string) (string, error) {
+			if name == "zsh" {
+				return "", errors.New("not found")
+			}
+			return "/bin/bash", nil
+		},
+		func(path, command string) ([]byte, error) {
+			if path != "/bin/bash" || command != "alias cc-test" {
+				t.Fatalf("run(%q, %q)", path, command)
+			}
+			return []byte("cc-test='linux'\n"), nil
+		})
+	if !found || alias != "cc-test='linux'" || shell != "bash" || config != "~/.bashrc" {
+		t.Fatalf("findShellAlias() = %q, %q, %q, %v", alias, shell, config, found)
+	}
+}
+
+func TestFindShellAliasHandlesMissingAndInvalidAliases(t *testing.T) {
+	lookups := 0
+	lookPath := func(string) (string, error) {
+		lookups++
+		return "/bin/shell", nil
+	}
+	run := func(string, string) ([]byte, error) { return nil, errors.New("alias not found") }
+	if _, _, _, found := findShellAlias("cc-test", lookPath, run); found {
+		t.Fatal("unexpected alias")
+	}
+	if lookups != 2 {
+		t.Fatalf("lookups = %d, want both supported shells", lookups)
+	}
+	if _, _, _, found := findShellAlias("not valid", lookPath, run); found {
+		t.Fatal("invalid command name reported as an alias")
+	}
+	if lookups != 2 {
+		t.Fatal("invalid command name should not inspect shells")
+	}
+}
 
 // A preset launch must be deterministic: whatever the parent shell exported for
 // either capacity variable, the dialect's own capacity is what Claude Code sees.
